@@ -50,7 +50,7 @@ module PagSeguro
 		    params["itemAmount#{i}"] = '%.2f' % product[:amount]
 		    params["itemQuantity#{i}"] = product[:quantity]
 		    params["itemShippingCost#{i}"] = '%.2f' % product[:shipping] if product[:shipping]
-		    params["itemWeight#{i}"] = product[:weight] if product[:shipping]
+		    params["itemWeight#{i}"] = product[:weight] if product[:weight]
 	    end
 
       # Add billing info
