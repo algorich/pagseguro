@@ -1,5 +1,8 @@
 module PagSeguro
   class Order
+    include ActiveModel::Validations
+    validates_with PagSeguro::Order::Validator
+
     # Map all billing attributes that will be added as form inputs.
     BILLING_MAPPING = {
       :name => 'senderName',
@@ -53,6 +56,17 @@ module PagSeguro
     # Should be a integer >= 30.
     attr_accessor :max_age
 
+    # Store the payment identification code created.
+    # This code should be used to direct the buyer to the payment stream.
+    attr_reader :checkout_code
+
+    # Store the creation date of checkout_code.
+    attr_reader :checkout_date
+
+    # Store the http response.
+    attr_reader :response
+
+
     def initialize(order_reference = nil)
       reset!
       self.reference = order_reference
@@ -96,6 +110,69 @@ module PagSeguro
     def add(options)
       self << options
     end
+
+    def post!
+      header = { 'Content-Type' => 'application/x-www-form-urlencoded; charset=utf-8' }
+
+      # Add required params
+      params = {
+	      :email => email || PagSeguro.config['email'],
+	      :token => token || PagSeguro.config['authenticity_token'],
+	      :currency => 'BRL',
+	      :reference => reference
+      }
+
+      # Add opitional params
+	    params[:shippingType] = shipping_type if shipping_type
+	    params[:redirectURL] = redirect_url if redirect_url
+	    params[:extraAmount] = '%.2f' % extra_amount if extra_amount
+	    params[:maxUses] = max_uses if max_uses
+	    params[:maxAge] = max_age if max_age
+
+	    # Add products
+	    products.each_with_index do |product, i|
+		    i += 1
+		    params["itemId#{i}"] = product[:id]
+		    params["itemDescription#{i}"] = product[:description]
+		    params["itemAmount#{i}"] = '%.2f' % product[:amount]
+		    params["itemQuantity#{i}"] = product[:quantity]
+		    params["itemShippingCost#{i}"] = '%.2f' % product[:shipping] if product[:shipping]
+		    params["itemWeight#{i}"] = product[:weight] if product[:weight]
+	    end
+
+      # Add billing info
+	    billing.each do |name, value|
+		    params[PagSeguro::Order::BILLING_MAPPING[name.to_sym]] = value
+	    end
+
+      post_options = { :body => params, :headers => header }
+	    @response = HTTParty.post(PagSeguro.gateway_url, post_options).parsed_response
+
+	    if valid? && response[:checkout]
+  	    @checkout_date = response[:checkout][:date].to_datetime
+        @checkout_code = response[:checkout][:code]
+      end
+
+      return valid?
+
+
+      # parse_response_errors response
+
+	    #return :errors => [{:code => 'HTTP 401', :message => 'Unauthorized'}] if response == 'Unauthorized'
+
+	    # response.recursive_symbolize_underscorize_keys!
+	    #if response[:checkout]
+  	  #  @checkout_date = response[:checkout][:date].to_datetime
+      #  @checkout = response[:checkout]
+      #  return true
+      #else
+      #  response[:errors].values.each do |error|
+      #    errors.add error[:code], error[:message]
+      #  end
+      #  return false
+      #end
+    end
+
   end
 end
 
