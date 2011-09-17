@@ -42,7 +42,7 @@ module PagSeguro
         11035 => :item, # Item weight invalid Value: {0}
         11036 => :extra_amount, # Extra amount invalid pattern: {0}. Must fit the patern: -?\d+.\d\{2\}
         11037 => :extra_amount, # Extra amount out of range: {0}
-        11038 => :base, # Invalid receiver for checkout: {0}, verify receiver's account status.
+        11038 => :receiver, # Invalid receiver for checkout: {0}, verify receiver's account status.
         11039 => :base, # Malformed request XML: {0}.
         11040 => :max_age, # maxAge invalid pattern: {0}. Must fit the patern: \d+
         11041 => :max_age, # maxAge out of range: {0}
@@ -81,8 +81,10 @@ module PagSeguro
 
         response_errors.each do |error|
           code = error[:code].to_i
+          message = I18n.t("activemodel.errors.pag_seguro/order.#{code}", :default => error[:message])
+
           attribute = ERROR_MAPPING[code] || :base
-          message = I18n.t(code, :scope => "pagseguro.errors", :default => [error[:message]])
+          attribute = :base if message == error[:message]
 
           record.errors.add attribute, message
         end
