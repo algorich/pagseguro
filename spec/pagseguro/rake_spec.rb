@@ -36,7 +36,6 @@ describe PagSeguro::Rake do
   end
 
   it "should ping return URL with default arguments" do
-    p params
     params["StatusTransacao"].should == "Completo"
     params["TipoPagamento"].should == "Cartão de Crédito"
   end
