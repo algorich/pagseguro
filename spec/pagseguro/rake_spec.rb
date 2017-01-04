@@ -139,3 +139,4 @@ describe PagSeguro::Rake do
     $HTTP_PARAMS
   end
 end
+
